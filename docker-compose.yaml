@@ -1,0 +1,66 @@
+name: "Mern-App"
+services:
+  mongodb:
+    container_name: mongodb_container
+    image: mongo
+    volumes:
+      - mongodbdata:/data/db
+    networks:
+      - joke-network
+    env_file:
+      - ./env/mongo.env
+  api:
+    depends_on:
+      - mongodb
+    container_name: joke-api-container
+    build:
+      context: ./API-jokes
+      dockerfile: Dockerfile
+    image: joke-api
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./env/server.env
+    networks:
+      - joke-network
+      - server-network
+    develop:
+      watch:
+        - path: ./API-jokes
+          action: sync
+          target: /app
+          ignore:
+            - node_modules
+  client:
+    stdin_open: true
+    tty: true 
+    depends_on:
+      - api
+    container_name: react-app-container
+    build:
+      context: ./react-client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:5000
+    image: react-app
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./env/server.env
+    networks:
+      - server-network
+    develop:
+      watch:
+        - path: ./react-client
+          action: sync
+          target: /app
+          ignore:
+            - node_modules
+            - dist
+
+
+volumes:
+  mongodbdata:
+networks:
+  joke-network:
+  server-network:
